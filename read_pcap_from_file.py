@@ -13,6 +13,10 @@ import pynmea2
 import datetime
 import utm 
 
+#For fileinput
+from tkinter import Tk
+from tkinter.filedialog import askopenfilename
+
 from tools.lidar_values_and_settings import lidar_info
 from tools.lidar_values_and_settings import udp_info
 from tools.lidar_values_and_settings import dt_measurement
@@ -184,35 +188,35 @@ def process_pcap(outfile_location, file_name, ins_file, num_frames, packet_devis
 
 
 
-
-if __name__ == '__main__':    
-    #file_name = './pcap_recordings/2019-08-09-08-24-13_Velodyne-HDL-32-Data.pcap'
-    #file_name = './pcap_recordings/2019-08-09-10-40-38_Velodyne-HDL-32-Data.pcap'
-    #file_name = './pcap_recordings/2019-08-09-15-21-40_Velodyne-HDL-32-Data_calibration_scan.pcap'
-    
+if __name__ == '__main__':       
     location_frame_files = "./files_from_pcap/"
     packet_devisor = 1 #Will only process every n packets
-    num_frames = 2000 #If set to negative value it will finish all
+    num_frames = 20 #If set to negative value it will finish all
     outfile_directory = './collected_las_files_pcap/'
     num_frames_per_las_file = 200 * packet_devisor # Possible to divide into different batches to limit data stored in memory
+    file_name_input_default = 'wireshark_flight_1'
+    file_input_folder = './flight_scans/'
 
-    file_name_input = input("Write file name to read from\n")
+    ins_file_default = './flight_ins/export_flight01_20.08.19_all.txt'
+
+    file_name_input = input("Write file name to read from (the flight must be in the " + file_input_folder + " folder)\n")
     if not file_name_input:
-        file_name_input = 'wireshark_flight_1'    
-    file_name = "./" + file_name_input + ".pcap"
+        file_name_input = file_name_input_default
+    
+    file_name_input_full_path = file_input_folder + file_name_input
+
+    file_name = "./" + file_name_input_full_path + ".pcap"
     if not os.path.isfile(file_name):
         print('"{}" does not exist'.format(file_name), file=sys.stderr)
         sys.exit(-1)
     
-
     outfile_file_name = input("Write file name to read to\n")
     if not outfile_file_name:
         outfile_file_name = file_name_input
     
-    ins_file = './INS/export_flight01_20.08.19_all.txt'
 
     time_start = time_ns()
-    process_pcap(location_frame_files, file_name, ins_file, num_frames, packet_devisor)
+    process_pcap(location_frame_files, file_name, ins_file_default, num_frames, packet_devisor)
     print("Execution time from pcap:",(time_ns() - time_start)/pow(10,9))
     
     #sys.exit(0)
@@ -221,7 +225,7 @@ if __name__ == '__main__':
     batch_num = 0
     
     time_start = time_ns()
-    while batch_num*num_frames_per_las_file <= num_frames or num_frames < 0:
+    while batch_num*num_frames_per_las_file <= num_frames or num_frames < 0: 
         time_top = time_ns()
         data, offset = write_to_las.load_las_files_in_directory_with_offset(location_frame_files, num_frames_per_las_file, delete = True)
         if isinstance(data, int):
