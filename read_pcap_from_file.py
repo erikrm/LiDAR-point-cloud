@@ -146,9 +146,6 @@ def process_pcap(out_file_location, file_name, ins_file, num_frames, packet_devi
 
                     #mask = np.isin(data['laser_id'], [0, 5, 10])
                     
-                    with open('timestamp.csv','a') as fd:
-                        np.savetxt(fd,np.divide(data_trimmed['timestamp'], pow(10,9)) + current_gps_time_toh + (flight_date.weekday()+1)*24*3600,delimiter='\t')
-
                     """
                     with open('test.csv','a') as fd:
                         array = np.append(data_trimmed['xyz'], data_trimmed['xyz_lu'], axis=1)
