@@ -15,7 +15,7 @@ import utm
 
 #For fileinput
 from tkinter import Tk
-from tkinter.filedialog import askopenfilename
+from tkinter.filedialog import askopenfilename, askdirectory
 
 from tools.lidar_values_and_settings import lidar_info
 from tools.lidar_values_and_settings import udp_info
@@ -28,7 +28,7 @@ from tools import write_to_las
 
 
 
-def process_pcap(outfile_location, file_name, ins_file, num_frames, packet_devisor): 
+def process_pcap(out_file_location, file_name, ins_file, num_frames, packet_devisor): 
     """Loads the file and returns the data sorted into frames where on frame is a the field of view. Zero indexed, it has to work through all the data from start to last_fram_nr whatever you write in first_frame_nr"""
     print('Opening {}...'.format(file_name))
 
@@ -132,7 +132,7 @@ def process_pcap(outfile_location, file_name, ins_file, num_frames, packet_devis
                         str_frame_nr = '0' + str(frame_nr)
                     else: str_frame_nr = str(frame_nr)
 
-                    file_name = outfile_location + 'frame_' + str_frame_nr + '.las'
+                    file_name = out_file_location + 'frame_' + str_frame_nr + '.las'
                     data_trimmed = data[np.nonzero(data)]
                     data.fill(0)
                     #data_trimmed = data_trimmed[data_trimmed['laser_id'] == 5]
@@ -185,38 +185,31 @@ def process_pcap(outfile_location, file_name, ins_file, num_frames, packet_devis
             #print(last_nmea_message.timestamp)
             data_position_nr += 1
         
+def get_input_file_from_dialog(title, file_path, file_type):
+    Tk().withdraw() # we don't want a full GUI, so keep the root window from appearing
+    file_name = askopenfilename(initialdir=file_path, title = title, filetypes = ((file_type + " files" , "*." + file_type),("all files" , "*.*"))) # show an "Open" dialog box and return the path to the selected file
 
+    if not os.path.isfile(file_name):
+        print('"{}" does not exist'.format(file_name), file=sys.stderr)
+        sys.exit(-1) #Should maybe be some more sofisticated error handling
+
+    return file_name
 
 
 if __name__ == '__main__':       
-    location_frame_files = "./files_from_pcap/"
+    temp_location_frame_files = "./files_from_pcap/"
     packet_devisor = 1 #Will only process every n packets
     num_frames = 20 #If set to negative value it will finish all
-    outfile_directory = './collected_las_files_pcap/'
     num_frames_per_las_file = 200 * packet_devisor # Possible to divide into different batches to limit data stored in memory
-    file_name_input_default = 'wireshark_flight_1'
-    file_input_folder = './flight_scans/'
-
-    ins_file_default = './flight_ins/export_flight01_20.08.19_all.txt'
-
-    file_name_input = input("Write file name to read from (the flight must be in the " + file_input_folder + " folder)\n")
-    if not file_name_input:
-        file_name_input = file_name_input_default
     
-    file_name_input_full_path = file_input_folder + file_name_input
+    #Find input file locations and output folder:
+    file_name = get_input_file_from_dialog("Choose PCAP file", "./flight_scans/", "pcap")
+    ins_file = get_input_file_from_dialog("Choose INS file", "./flight_ins", "txt")
+    out_file_directory = askdirectory(initialdir="./", title="Choose folder for the las-files")
 
-    file_name = "./" + file_name_input_full_path + ".pcap"
-    if not os.path.isfile(file_name):
-        print('"{}" does not exist'.format(file_name), file=sys.stderr)
-        sys.exit(-1)
-    
-    outfile_file_name = input("Write file name to read to\n")
-    if not outfile_file_name:
-        outfile_file_name = file_name_input
-    
-
+    print("outfile_dir", out_file_directory)
     time_start = time_ns()
-    process_pcap(location_frame_files, file_name, ins_file_default, num_frames, packet_devisor)
+    process_pcap(temp_location_frame_files, file_name, ins_file, num_frames, packet_devisor)
     print("Execution time from pcap:",(time_ns() - time_start)/pow(10,9))
     
     #sys.exit(0)
@@ -227,14 +220,15 @@ if __name__ == '__main__':
     time_start = time_ns()
     while batch_num*num_frames_per_las_file <= num_frames or num_frames < 0: 
         time_top = time_ns()
-        data, offset = write_to_las.load_las_files_in_directory_with_offset(location_frame_files, num_frames_per_las_file, delete = True)
+        data, offset = write_to_las.load_las_files_in_directory_with_offset(temp_location_frame_files, num_frames_per_las_file, delete = True)
         if isinstance(data, int):
             if not data:
                 print("Finished all the files")
                 sys.exit(0)
 
-        write_to_las.write_data_into_files_based_on_user_data_with_offset(outfile_directory + outfile_file_name + '_batch_' + str(batch_num), None, data, offset)    
-        # still_contain_las_files = write_to_las.delete_las_files_in_directory(location_frame_files,num_frames_per_las_file)
+        out_file_name = 'batch_' + str(batch_num)
+        write_to_las.write_data_into_files_based_on_user_data_with_offset(out_file_directory + "/" + out_file_name, None, data, offset)    
+        # still_contain_las_files = write_to_las.delete_las_files_in_directory(temp_location_frame_files,num_frames_per_las_file)
         batch_num += 1
         print("Total execution time collecting:",(time_ns() - time_start)/pow(10,9),'Execution time this batch:',(time_ns() - time_top)/pow(10,9),'Batch num:', batch_num)
 
