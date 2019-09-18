@@ -12,8 +12,9 @@ import laspy
 import pynmea2
 import datetime
 import utm 
+import logging 
 
-#For fileinput
+#For file input
 from tkinter import Tk
 from tkinter.filedialog import askopenfilename, askdirectory
 from tkinter import messagebox
@@ -41,13 +42,10 @@ def process_ins_to_utm(ins_file):
     dt_ins_raw = [('gps_time','f8'),('longitude','f8'),('latitude','f8'),('z','f8'),('roll','f8'),('pitch','f8'),('yaw','f8')] #The idea is to convert from dt_ins_gps to a local frame and save it in dt_ins_local. First I will just simulate the values in dt_ins_local
     ins_raw_data = np.genfromtxt(ins_file, dtype=dt_ins_raw, delimiter='\t') #We are loosing the 9th decimal of the ins file
     
-    #np.savetxt('ins_raw_data.csv',ins_raw_data)
-    #print("dt_ins_raw", dt_ins_raw)
     dt_ins = [('gps_time','f8'),('x','f8'),('y','f8'),('z','f8'),('roll','f8'),('pitch','f8'),('yaw','f8')] #The idea is to convert from dt_ins_gps to a local frame and save it in dt_ins_local. First I will just simulate the values in dt_ins_local
     ins_data = np.zeros(ins_raw_data.size, dtype=dt_ins)
 
-    
-    print('INS file', ins_file, 'loaded')
+    logging.info('Loaded INS file: ' +str(ins_file))
 
     zone_temp = ''
     letter_temp = ''
@@ -56,10 +54,10 @@ def process_ins_to_utm(ins_file):
         ins_data['x'][i], ins_data['y'][i], zone, letter = utm.conversion.from_latlon(ins_raw_data['latitude'][i], ins_raw_data['longitude'][i])
         if zone_temp != zone:
             zone_temp = zone
-            print("Zone set to:", zone)
         elif letter_temp != letter:
             letter_temp = letter
-            print("Letter set to:", letter)
+
+    logging.info('Latlon -> utm conversion finished, zone: ' + str(zone) + ' letter: ' + str(letter))
 
     ins_data['gps_time'] = ins_raw_data['gps_time'] % (3600 * 24) #Remove all full days 
     ins_data['z'] = ins_raw_data['z']
@@ -67,35 +65,33 @@ def process_ins_to_utm(ins_file):
     ins_data['pitch'] = ins_raw_data['pitch']
     ins_data['yaw'] = ins_raw_data['yaw']
     
-    #print("dt_ins", dt_ins)
-    #np.savetxt('ins_data.csv',ins_data)
-    
-    print('Latlon -> utm conversion finished, zone:', zone, 'letter:', letter)
+    logging.info("Time span INS data: " + seconds_to_time_str(ins_data['gps_time'][0]) + " -> " + seconds_to_time_str(ins_data['gps_time'][-1]))
+
     return ins_data
 
 
 def process_pcap(out_file_location, file_name, ins_data, num_frames, packet_devisor): 
     """Loads the file and returns the data sorted into frames where on frame is a the field of view. Zero indexed, it has to work through all the data from start to last_fram_nr whatever you write in first_frame_nr"""
-    print('Opening {}...'.format(file_name))
+    
 
     frame_nr = 0
     data_packet_nr = 0
     last_azimuth_block = -1    
 
     
-    flight_date = datetime.date.fromtimestamp(0) #Just to initialize
+    #flight_date = datetime.date.fromtimestamp(0) #Just to initialize
 
     data_packet_length = lidar_info['num_firings_per_packet']
     num_data_packets = lidar_info['expected_number_of_packets_per_rotation']
     data_length_fov = data_packet_length * (num_data_packets + 1)
 
-    data_position_length = lidar_info['position_packets_per_second']
+    #data_position_length = lidar_info['position_packets_per_second']
     data = np.zeros(data_length_fov,dtype=dt_measurement)
     #data_position = np.zeros(data_position_length,dtype=dt_position)
     data_position_nr = 0
 
     last_nmea_message = ''
-    last_gps_time_toh = 0
+    #last_gps_time_toh = 0
     
     current_gps_time_toh = -1
     current_gps_time = -1
@@ -107,14 +103,16 @@ def process_pcap(out_file_location, file_name, ins_data, num_frames, packet_devi
     print("First ins_time",seconds_to_time_str(ins_data['gps_time'][0]), "last ins_time", seconds_to_time_str(ins_data['gps_time'][-1]))
     printed_first_lidar_time = False
     
+    print('Opening {}...'.format(file_name))
     for (pkt_data, pkt_metadata,) in RawPcapReader(file_name): #There should be fdesc and magic values to define the pcap file, but I have not found out what they should be. It seems to be stable without them
         index += 1
-        
-        flight_date = datetime.date.fromtimestamp(pkt_metadata.sec) #We need the date to get the gps time
+
+        #flight_date = datetime.date.fromtimestamp(pkt_metadata.sec) #We need the date to get the gps time
         
         if pkt_metadata.wirelen == 1206 + udp_info['header_size'] and index % packet_devisor == 0:
             if not printed_first_lidar_time:
                 print("First lidar time", seconds_to_time_str(current_gps_time))
+                first_lidar_time = current_gps_time
                 printed_first_lidar_time = True
 
             if current_gps_time >= ins_data['gps_time'][0] and current_gps_time <= ins_data['gps_time'][-1]:
@@ -175,6 +173,9 @@ def process_pcap(out_file_location, file_name, ins_data, num_frames, packet_devi
                     print('Processed frames: ' + str(frame_nr) + ' lidar time: ' + seconds_to_time_str(current_gps_time), end='\r')
                     if frame_nr == num_frames:
                         print('Processed frames: ' + str(frame_nr) + ' last lidar time: ' + seconds_to_time_str(current_gps_time), end='\n')
+
+                        logging.info('Time span pcap data: ' + seconds_to_time_str(first_lidar_time) + ' -> ' + seconds_to_time_str(current_gps_time))
+
                         break
                     
             
@@ -206,22 +207,33 @@ def get_input_file_from_dialog(title, file_path, file_type):
     return file_name
 
 
-if __name__ == '__main__':       
+if __name__ == '__main__':     
     temp_location_frame_files = "./files_from_pcap/"
     packet_devisor = 1 #Will only process every n packets
-    num_frames = -1 #If set to negative value it will finish all
+    num_frames = 200 #If set to negative value it will finish all
     num_frames_per_las_file = 200 * packet_devisor # Possible to divide into different batches to limit data stored in memory
     
     #Find input file locations and output folder:
-    file_name = get_input_file_from_dialog("Choose PCAP file", "./flight_scans/", "pcap")
-    ins_file = get_input_file_from_dialog("Choose INS file", "./flight_ins", "txt")
-    out_file_directory = askdirectory(initialdir="./", title="Choose folder for the output las-files")
+    file_path_pcap = get_input_file_from_dialog("Choose PCAP file", "./flight_scans", "pcap")
+    file_path_ins = get_input_file_from_dialog("Choose INS file", "./flight_ins", "txt")
+    out_file_directory = askdirectory(initialdir="./processed_las", title="Choose folder for the output las-files")
+
+    #Using a log file to save info about the processing
+    logging.basicConfig(filename=out_file_directory + '/log.txt',
+                        filemode='a',
+                        format='%(asctime)s,%(msecs)d %(name)s %(levelname)s %(message)s',
+                        datefmt='%H:%M:%S',
+                        level=logging.DEBUG)
 
     time_start = time_ns()
     
-    ins_data = process_ins_to_utm(ins_file)
+    logging.info("Processing started")
+    logging.info("Parameters: packet_devisor=" + str(packet_devisor) + " num_frames=" + str(num_frames) + " num_frames_per_las_file=" + str(num_frames_per_las_file))
+    logging.info("File paths: pcap=" + str(file_path_pcap) + " ins=" + str(file_path_ins) + " out_file_directory=" + str(out_file_directory))
 
-    process_pcap(temp_location_frame_files, file_name, ins_data, num_frames, packet_devisor)
+    ins_data = process_ins_to_utm(file_path_ins)
+
+    process_pcap(temp_location_frame_files, file_path_pcap, ins_data, num_frames, packet_devisor)
     print("Execution time from pcap:",(time_ns() - time_start)/pow(10,9))
     
     batch_num = 0
