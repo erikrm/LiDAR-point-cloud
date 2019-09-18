@@ -3,6 +3,7 @@ frame_files/
 files_from_pcap/
 flight_ins/
 flight_scans/
+collected_las_files_pcap
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
