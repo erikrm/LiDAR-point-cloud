@@ -25,8 +25,19 @@ from tools.lidar_values_and_settings import dt_position
 from tools.lidar_values_and_settings import angle_offset_per_laser as offset
 from tools import write_to_las
 
+def seconds_to_time_str(seconds):
+    seconds_since_midnight = seconds % 86400 #60sec *60min *24hours
+    hours = int(seconds_since_midnight / 3600)
+    minutes = int((seconds_since_midnight % (3600*hours))/60)
+    seconds = int(seconds_since_midnight % (hours*3600+minutes*60))
+    
+    if seconds < 10:
+        string = str(hours) + ":"  + str(minutes) + ":0" + str(seconds)
+    else:
+        string = str(hours) + ":"  + str(minutes) + ":" + str(seconds)
+    return string
 
-def process_ins(ins_file):
+def process_ins_to_utm(ins_file):
     dt_ins_raw = [('gps_time','f8'),('longitude','f8'),('latitude','f8'),('z','f8'),('roll','f8'),('pitch','f8'),('yaw','f8')] #The idea is to convert from dt_ins_gps to a local frame and save it in dt_ins_local. First I will just simulate the values in dt_ins_local
     ins_raw_data = np.genfromtxt(ins_file, dtype=dt_ins_raw, delimiter='\t') #We are loosing the 9th decimal of the ins file
     
@@ -72,7 +83,7 @@ def process_pcap(out_file_location, file_name, ins_data, num_frames, packet_devi
     last_azimuth_block = -1    
 
     
-    flight_date = datetime.date.fromtimestamp(0) #Just to initilize
+    flight_date = datetime.date.fromtimestamp(0) #Just to initialize
 
     data_packet_length = lidar_info['num_firings_per_packet']
     num_data_packets = lidar_info['expected_number_of_packets_per_rotation']
@@ -93,7 +104,7 @@ def process_pcap(out_file_location, file_name, ins_data, num_frames, packet_devi
     
     index = -1
     
-    print("First ins_time", ins_data['gps_time'][0], "last ins_time", ins_data['gps_time'][-1])
+    print("First ins_time",seconds_to_time_str(ins_data['gps_time'][0]), "last ins_time", seconds_to_time_str(ins_data['gps_time'][-1]))
     printed_first_lidar_time = False
     
     for (pkt_data, pkt_metadata,) in RawPcapReader(file_name): #There should be fdesc and magic values to define the pcap file, but I have not found out what they should be. It seems to be stable without them
@@ -103,7 +114,7 @@ def process_pcap(out_file_location, file_name, ins_data, num_frames, packet_devi
         
         if pkt_metadata.wirelen == 1206 + udp_info['header_size'] and index % packet_devisor == 0:
             if not printed_first_lidar_time:
-                print("First lidar time", current_gps_time, "first toh", current_gps_time_toh)
+                print("First lidar time", seconds_to_time_str(current_gps_time))
                 printed_first_lidar_time = True
 
             if current_gps_time >= ins_data['gps_time'][0] and current_gps_time <= ins_data['gps_time'][-1]:
@@ -161,9 +172,9 @@ def process_pcap(out_file_location, file_name, ins_data, num_frames, packet_devi
                     data_position_nr = 0
 
                     frame_nr += 1
-                    print('Processed frames: ' + str(frame_nr) + ' lidar time: ' + str(current_gps_time), end='\r')
+                    print('Processed frames: ' + str(frame_nr) + ' lidar time: ' + seconds_to_time_str(current_gps_time), end='\r')
                     if frame_nr == num_frames:
-                        print('Processed frames: ' + str(frame_nr) + ' lidar time: ' + str(current_gps_time), end='\n')
+                        print('Processed frames: ' + str(frame_nr) + ' last lidar time: ' + seconds_to_time_str(current_gps_time), end='\n')
                         break
                     
             
@@ -198,7 +209,7 @@ def get_input_file_from_dialog(title, file_path, file_type):
 if __name__ == '__main__':       
     temp_location_frame_files = "./files_from_pcap/"
     packet_devisor = 1 #Will only process every n packets
-    num_frames = 20 #If set to negative value it will finish all
+    num_frames = -1 #If set to negative value it will finish all
     num_frames_per_las_file = 200 * packet_devisor # Possible to divide into different batches to limit data stored in memory
     
     #Find input file locations and output folder:
@@ -208,7 +219,7 @@ if __name__ == '__main__':
 
     time_start = time_ns()
     
-    ins_data = process_ins(ins_file)
+    ins_data = process_ins_to_utm(ins_file)
 
     process_pcap(temp_location_frame_files, file_name, ins_data, num_frames, packet_devisor)
     print("Execution time from pcap:",(time_ns() - time_start)/pow(10,9))
