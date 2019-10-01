@@ -1,5 +1,6 @@
 laspy==1.5.1
 numpy==1.17.0
+openpyxl==3.0.0
 pynmea2==1.15.0
 scapy==2.4.3
 utm==0.5.0
