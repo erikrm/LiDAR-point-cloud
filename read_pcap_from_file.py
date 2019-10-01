@@ -247,7 +247,10 @@ if __name__ == '__main__':
                 print("Finished all the files")
                 sys.exit(0)
 
-        out_file_name = 'batch_' + str(batch_num)
+        if num_frames_per_las_file >= num_frames:
+            out_file_name = ''
+        else: out_file_name = 'batch_' + str(batch_num) + '_'
+
         write_to_las.write_data_into_files_based_on_user_data_with_offset(out_file_directory + "/" + out_file_name, None, data, offset)    
         # still_contain_las_files = write_to_las.delete_las_files_in_directory(temp_location_frame_files,num_frames_per_las_file)
         batch_num += 1
