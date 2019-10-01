@@ -139,9 +139,9 @@ def write_data_into_files_based_on_user_data(file_name, header, data):
 def write_data_into_files_based_on_user_data_with_offset(file_name, header, data, offset):
     for i in range(lidar_info['num_lasers']):      
         if file_name.endswith(".las"):
-            file_name_temp = file_name.replace(".las", "_laser_id_" + str(i) + ".las")
+            file_name_temp = file_name.replace(".las", "laser_id_" + str(i) + ".las")
         else: 
-            file_name_temp = file_name + "_laser_id_" + str(i) + ".las"
+            file_name_temp = file_name + "laser_id_" + str(i) + ".las"
 
         if np.any(data['point']['user_data'] == i):
             write_points_to_las_with_offset(file_name_temp, header, data[data['point']['user_data'] == i], offset)
@@ -200,7 +200,7 @@ def load_las_files_in_directory(directory_path, num_files, delete):
 def load_las_files_in_directory_with_offset(directory_path, num_files, delete):
     """Loads all las files in directory into one numpy array, returns -1 if no files"""
     if num_files > len(os.listdir(directory_path)):
-        num_files = len(os.listdir(directory_path))
+        num_files = len(os.listdir(directory_path)) # Load all files
 
     num_lasers_in_use = lidar_info['num_lasers_in_use']
     fire_seq_per_packet = 12
