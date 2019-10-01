@@ -1,8 +1,10 @@
 """Setting and constants used by the program set, all times are given in nanoseconds, 
 important to set serial_settings, udp_info and lidar_settings"""
 import numpy as np
+from openpyxl import load_workbook
+from .div_functions import get_input_file_from_dialog
 
-#VLP-32c: 
+#Constants:
 lidar_constants = {
     'num_lasers': 32,
     'baudrate': 9600,
@@ -12,13 +14,61 @@ lidar_constants = {
     'num_fire_sequence_bytes': 100
 }
 
-lidar_settings = {
-    'fov_size': 30,
-    'rpm': 300, #Must be divisible by 60 and in the range [300, 1200], The LiDAR won't accept anything else. 
-    'num_returns': 2,  #Dual mode = 2, single mode = 1. The programs understands the number of returns themself, this is used for testing
-    'timeout_between_packets':10*pow(10,6), #How long to wait before deciding that all packets in a FOV has been recieved
-    'num_lasers_in_use': 32
-}
+excel_setting_file_name = get_input_file_from_dialog("Excel LiDAR settings", "./", "xlsx")
+
+if excel_setting_file_name != -1:
+    wb = load_workbook(filename = excel_setting_file_name)
+    sheet_lidar_settings = wb['Settings']
+
+    lidar_settings = {
+        'fov_size': sheet_lidar_settings['B6'].value,
+        'rpm': sheet_lidar_settings['B7'].value, #Must be divisible by 60 and in the range [300, 1200], The LiDAR won't accept anything else. 
+        'num_returns': sheet_lidar_settings['B8'].value,  #Dual mode = 2, single mode = 1. The programs understands the number of returns themself, this is used for testing
+        'timeout_between_packets':sheet_lidar_settings['B9'].value, #How long to wait before deciding that all packets in a FOV has been recieved
+        'num_lasers_in_use': 32
+    }
+
+    udp_info = {
+    'ip': sheet_lidar_settings['B12'].value,
+    'port_measurement_packet': sheet_lidar_settings['B13'].value,
+    'port_position_packet': sheet_lidar_settings['B14'].value,
+    }
+
+    # xyz in mm, roll, pitch, yaw in degrees. Given in LiDAR perspective with coordinate system as defined in user manual 9.2
+    lidar_lever_arm = {
+        'x': sheet_lidar_settings['B17'].value,
+        'y': sheet_lidar_settings['B18'].value, 
+        'z': sheet_lidar_settings['B19'].value,
+        'roll': sheet_lidar_settings['B20'].value,
+        'pitch': sheet_lidar_settings['B21'].value, 
+        'yaw': sheet_lidar_settings['B22'].value
+    }
+else: #Default settings if the provided sheet is wrong
+    lidar_settings = {
+        'fov_size': 30,
+        'rpm': 300, #Must be divisible by 60 and in the range [300, 1200], The LiDAR won't accept anything else. 
+        'num_returns': 2,  #Dual mode = 2, single mode = 1. The programs understands the number of returns themself, this is used for testing
+        'timeout_between_packets':10*pow(10,6), #How long to wait before deciding that all packets in a FOV has been recieved
+        'num_lasers_in_use': 32
+    }
+
+    # xyz in mm, roll, pitch, yaw in degrees. Given in LiDAR perspective with coordinate system as defined in user manual 9.2
+    lidar_lever_arm = {
+        'x': 0,
+        'y': 0, 
+        'z': 0,
+        'roll': 270,
+        'pitch': 180, 
+        'yaw': 0
+    }
+
+    # Socket: 
+    udp_info = {
+        'ip':'192.168.168.201',
+        'port_measurement_packet': 2368,
+        'port_position_packet': 8308,
+    }
+
 
 lidar_info = {
     'rotation_frequency':int(lidar_settings['rpm']/60), # 5Hz
@@ -30,15 +80,9 @@ lidar_info = {
     'position_packets_per_second': 1507 #From user manual
 }
 
-# xyz in mm, roll, pitch, yaw in degrees. Given in LiDAR perspective with coordinate system as defined in user manual 9.2
-lidar_lever_arm = {
-    'x': -35.5,
-    'y': 51.9, 
-    'z': 215.7,
-    'roll': 270,
-    'pitch': 180, 
-    'yaw': 0
-}
+udp_info.update({'packet_read_time': lidar_info['time_in_fov'] + 5*pow(10,6), # adding 5ms buffer to be sure to get all packets)
+                 'header_size': 42 #bytes
+                }) 
 
 lidar_info.update(lidar_constants)
 lidar_info.update(lidar_settings)
@@ -53,14 +97,7 @@ serial_settings = {
 }
 
 
-# Socket: 
-udp_info = {
-    'ip':'192.168.168.201',
-    'port_measurement_packet': 2368,
-    'port_position_packet': 8308,
-    'header_size': 42, #bytes
-    'packet_read_time': lidar_info['time_in_fov'] + 5*pow(10,6) # adding 5ms buffer to be sure to get all packets
-}
+
 
 #Laser offset angles
 # The lasers are not pointed horizontaly outwards
