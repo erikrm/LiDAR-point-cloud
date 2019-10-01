@@ -4,6 +4,7 @@ flight_ins/
 flight_scans/
 collected_las_files_pcap/
 processed_las/
+test_files/
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
