@@ -14,6 +14,7 @@ from tools.lidar_values_and_settings import dt_measurement
 from tools.lidar_values_and_settings import dt_position
 from tools.lidar_values_and_settings import position_info_distribution_ints
 from tools.lidar_values_and_settings import lidar_lever_arm
+from tools.lidar_values_and_settings import gps_leap_seconds
 
 def unpack_measurement(recv_Data,frame_nr,last_azimuth_block_of_previous_data_packet,data_packet_nr):
     """Unpacks the recieved measurement data and returns it as a structured numpy array of size (384,13)""" 
@@ -166,7 +167,7 @@ def rotation_matrix_array(rpy):
 
 def interpolate_ins_2(measurement_data, ins_data, current_gps_time_toh):
 
-    gps_times = measurement_data['timestamp'] + current_gps_time_toh*pow(10,9) + 18*pow(10,9)
+    gps_times = measurement_data['timestamp'] + current_gps_time_toh*pow(10,9) + gps_leap_seconds*pow(10,9)
     #print("current gps_time_toh:", current_gps_time_toh)
     #print(measurement_data['timestamp'][np.nonzero(measurement_data)])
     #print(measurement_data['timestamp'][-100:])

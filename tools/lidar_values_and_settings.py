@@ -16,6 +16,7 @@ lidar_constants = {
 
 excel_setting_file_name = get_input_file_from_dialog("Excel LiDAR settings", "./", "xlsx")
 
+# Sets settings equal to the users preferences if the user chooses a suitable file, otherwise the default setting are applied
 if excel_setting_file_name != -1:
     wb = load_workbook(filename = excel_setting_file_name)
     sheet_lidar_settings = wb['Settings']
@@ -43,6 +44,9 @@ if excel_setting_file_name != -1:
         'pitch': sheet_lidar_settings['B21'].value, 
         'yaw': sheet_lidar_settings['B22'].value
     }
+
+    gps_leap_seconds = sheet_lidar_settings['B25'].values
+
 else: #Default settings if the provided sheet is wrong
     lidar_settings = {
         'fov_size': 30,
@@ -68,6 +72,8 @@ else: #Default settings if the provided sheet is wrong
         'port_measurement_packet': 2368,
         'port_position_packet': 8308,
     }
+
+    gps_leap_seconds = 18
 
 
 lidar_info = {
@@ -95,8 +101,6 @@ serial_settings = {
     'timeout': 10,
     'stopbits': 1
 }
-
-
 
 
 #Laser offset angles
