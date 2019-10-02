@@ -1,40 +1,50 @@
 import laspy
 from tools.lidar_values_and_settings import dt_measurement
 from tools.lidar_values_and_settings import lidar_info
+from tools.lidar_values_and_settings import las_file_settings
+
 import numpy as np
 import os
 #import udp_listen
 
 def write_one_frame_to_las(file_name, header, data_meas):
+    """Saves one frame to las, applies the offset and scale found in lidar_values_and_settings"""
+    x_offset = 0
+    y_offset = 0
+    z_offset = 0
+
     if header == None: 
-        header = laspy.header.Header(file_version=1.0, point_format=1)
+        header = laspy.header.Header(file_version=1.0, point_format=las_file_settings['point_format'])
     
     #print('Writing frame to {}...'.format(file_name))
     outfile = laspy.file.File(file_name,mode="w",header=header)
     
-    scale = [0.001, 0.001, 0.001]
-
-    x_offset = 0
-    y_offset = 0
+    scale = [las_file_settings['scale_x'], las_file_settings['scale_y'], las_file_settings['scale_z']]
 
     x_min = np.amin(data_meas['xyz'][:,0])
     x_max = np.amax(data_meas['xyz'][:,0])
-
+    
     y_min = np.amin(data_meas['xyz'][:,1])
     y_max = np.amax(data_meas['xyz'][:,1])
     
+    z_min = np.amin(data_meas['xyz'][:,2])
+    z_max = np.amax(data_meas['xyz'][:,2])
+
     if y_min < 0 or x_min < 0:
         print("NEGATIVE!!? xy_min", x_min, y_min, "xy_max", x_max, y_max)
 
-    if x_max > pow(10,6): #If it is more than one kilometer
+    if x_max > las_file_settings['max_x']:
         x_offset = int(x_min*scale[0]) #In meters
 
-    if y_max > pow(10,6):
+    if y_max > las_file_settings['max_y']:
         y_offset = int(y_min*scale[1]) #In meters
+
+    if z_max > las_file_settings['max_z']:
+        z_offset = int(z_min*scale[2])
 
     outfile.X = data_meas['xyz'][:,0] - x_offset/scale[0] #In measurement in mm, offset in m, have to divide by scale
     outfile.Y = data_meas['xyz'][:,1] - y_offset/scale[1] 
-    outfile.Z = data_meas['xyz'][:,2] #Shouldn't be necessary with offset for z
+    outfile.Z = data_meas['xyz'][:,2] - z_offset/scale[2] #Shouldn't be necessary with offset for z
 
     outfile.intensity = data_meas['reflectivity'] # This mismatch in name convention can lead to confusion, the LiDAR user manual uses reflectivity while las and the VeloView software uses intensity
     outfile.gps_time = data_meas['timestamp'] #Must add seconds until TOH, this is only from TOH
@@ -58,7 +68,7 @@ def write_one_frame_to_las(file_name, header, data_meas):
     #outfile.green = (data_meas['laser_id'] == 5) * 65535 # Set the horizontal laser to blue (and a little green)
     #outfile.blue = (data_meas['laser_id'] - 31) * 2048 -1
 
-    outfile.header.set_offset([x_offset, y_offset, 0])
+    outfile.header.set_offset([x_offset, y_offset, z_offset])
     outfile.header.set_scale(scale) #precision mm precision, multiply with 0.001 due to already operating in mm
     #outfile.header.set_wkt()
     outfile.close()

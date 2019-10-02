@@ -18,7 +18,7 @@ excel_setting_file_name = get_input_file_from_dialog("Excel LiDAR settings", "./
 
 # Sets settings equal to the users preferences if the user chooses a suitable file, otherwise the default setting are applied
 if excel_setting_file_name != -1:
-    wb = load_workbook(filename = excel_setting_file_name)
+    wb = load_workbook(filename = excel_setting_file_name, data_only=True) #data_only=True because we only want the numerical values, not the formulas
     sheet_lidar_settings = wb['Settings']
 
     lidar_settings = {
@@ -47,6 +47,16 @@ if excel_setting_file_name != -1:
 
     gps_leap_seconds = sheet_lidar_settings['B25'].value
 
+    las_file_settings = {
+        'point_format' : sheet_lidar_settings['B31'].value,
+        'scale_x' : sheet_lidar_settings['B33'].value,
+        'scale_y' : sheet_lidar_settings['B34'].value,
+        'scale_z' : sheet_lidar_settings['B35'].value,
+        'max_x' : sheet_lidar_settings['B37'].value,
+        'max_y' : sheet_lidar_settings['B38'].value,
+        'max_z' : sheet_lidar_settings['B39'].value
+    }
+
 else: #Default settings if the provided sheet is wrong
     lidar_settings = {
         'fov_size': 30,
@@ -74,6 +84,16 @@ else: #Default settings if the provided sheet is wrong
     }
 
     gps_leap_seconds = 18
+
+    las_file_settings = {
+        'point_format' : 1,
+        'scale_x' : 0.001, #Converts to from mm to m when saving to las
+        'scale_y' : 0.001,
+        'scale_z' : 0.001,
+        'max_x' : pow(10,6), #Uses 1 kilometer as the limit before applying offset
+        'max_y' : pow(10,6),
+        'max_z' : pow(10,6)
+    }
 
 
 lidar_info = {
