@@ -6,7 +6,7 @@ collected_las_files_pcap/
 processed_las/
 test_files/
 
-#For the xlsx follow file:
+#For the microsoft excel follow file:
 *~$*.xlsx
 
 # Byte-compiled / optimized / DLL files
