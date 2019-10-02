@@ -279,23 +279,23 @@ if __name__ == '__main__':
     time_start = time_ns()
     while batch_num*num_frames_per_las_file <= num_frames or num_frames < 0: 
         time_top = time_ns()
-        data, offset = write_to_las.load_las_files_in_directory_with_offset(temp_location_frame_files, num_frames_per_las_file, delete = True)
+        data, offset, loaded_frame_files = write_to_las.load_las_files_in_directory_with_offset(temp_location_frame_files, num_frames_per_las_file)
         if isinstance(data, int):
-            if not data:
-                print("Finished all the files")
-                sys.exit(0)
+            print("Finished all the files")
+            break
 
         if num_frames_per_las_file >= num_frames:
             out_file_name = ''
         else: out_file_name = 'batch_' + str(batch_num) + '_'
 
         write_to_las.write_data_into_files_based_on_user_data_with_offset(out_file_directory + "/" + out_file_name, None, data, offset)    
+
+        for frame_file_name in loaded_frame_files:
+            os.remove(frame_file_name)
+            print("removed", frame_file_name)
+
         # still_contain_las_files = write_to_las.delete_las_files_in_directory(temp_location_frame_files,num_frames_per_las_file)
         batch_num += 1
         print("Total execution time collecting:",(time_ns() - time_start)/pow(10,9),'Execution time this batch:',(time_ns() - time_top)/pow(10,9),'Batch num:', batch_num)
 
     sys.exit(0) 
-
-    #Not important: 
-    #animate it: https://stackoverflow.com/questions/41602588/matplotlib-3d-scatter-animations 
-    #TODO: animate it with intensity change: https://pythonmatplotlibtips.blogspot.com/2018/11/animation-3d-surface-plot-funcanimation-matplotlib.html 

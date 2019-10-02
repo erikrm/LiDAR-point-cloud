@@ -107,7 +107,7 @@ def write_data_into_files_based_on_user_data_with_offset(file_name, header, data
             print(file_name_temp)
 
 
-def load_las_files_in_directory_with_offset(directory_path, num_files, delete):
+def load_las_files_in_directory_with_offset(directory_path, num_files):
     """Loads all las files in directory into one numpy array, returns -1 if no files"""
     if num_files > len(os.listdir(directory_path)):
         num_files = len(os.listdir(directory_path)) # Load all files
@@ -126,8 +126,10 @@ def load_las_files_in_directory_with_offset(directory_path, num_files, delete):
     #Find general information:
     offset_min = [0,0,0]
 
+    loaded_frame_files = []
+
     idx = 0
-    for file in os.listdir(directory_path):
+    for file in os.listdir(directory_path): # Go through all the files to find the smallest offset
         if file.endswith(".las"):
             file_name = os.path.join(directory_path, file)
             infile = laspy.file.File(file_name, mode="r")
@@ -143,6 +145,8 @@ def load_las_files_in_directory_with_offset(directory_path, num_files, delete):
             
 
     print("offset_min", offset_min)
+
+    
 
     for file in os.listdir(directory_path):
         if file.endswith(".las"):
@@ -174,8 +178,7 @@ def load_las_files_in_directory_with_offset(directory_path, num_files, delete):
         
             infile.close()
             
-            if delete:
-                os.remove(file_name)
+            loaded_frame_files.append(file_name)
 
             idx_file_num += 1
             if num_files == idx_file_num:
@@ -183,10 +186,10 @@ def load_las_files_in_directory_with_offset(directory_path, num_files, delete):
 
     if not data_table_exists:
         print("No data in directory path", directory_path)
-        return False, offset_min
+        return False, offset_min, loaded_frame_files
     else: 
         print("Expected measurements: "+ str(data_len_total) + " Received measurements: " + str(idx_to_write) + " Data loss: " + str(data_len_total - idx_to_write))
-        return data[0:idx_to_write], offset_min
+        return data[0:idx_to_write], offset_min, loaded_frame_files
 
 
 def delete_las_files_in_directory(directory_path, num_files):
