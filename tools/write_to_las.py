@@ -73,58 +73,17 @@ def write_one_frame_to_las(file_name, header, data_meas):
     #outfile.header.set_wkt()
     outfile.close()
 
-def load_points_from_las(file_name):
-    infile = laspy.file.File(file_name, mode="r")
-    
-    points = np.array(infile.points)
-
-    infile.close()
-    return points
-
-def write_points_to_las(file_name, header, data):
-    if header == None:
-        header = laspy.header.Header(file_version=1.0, point_format=1)
-    
-    outfile = laspy.file.File(file_name, mode="w", header=header)
-
-    outfile.points = data
-    outfile.header.set_scale([0.001,0.001,0.001]) #1 mm precision
-
-    outfile.close()
-
 def write_points_to_las_with_offset(file_name, header, data, offset):
     if header == None:
-        header = laspy.header.Header(file_version=1.0, point_format=1)
+        header = laspy.header.Header(file_version=1.0, point_format=las_file_settings['point_format'])
     
     outfile = laspy.file.File(file_name, mode="w", header=header)
 
     outfile.points = data
-    outfile.header.set_scale([0.001,0.001,0.001]) #1 mm precision
+    outfile.header.set_scale([las_file_settings['scale_x'],las_file_settings['scale_y'],las_file_settings['scale_z']]) 
     outfile.header.set_offset(offset)
     outfile.close()
 
-
-def write_data_into_files_based_on_classifier(file_name,header,data,classifier_array):
-    if len(classifier_array) == 1: 
-        if classifier_array[0] == 'user_data':
-            for i in range(lidar_info['num_lasers']):      
-                if file_name.endswith(".las"):
-                    file_name_temp = file_name.replace(".las", "_laser_id_" + str(i) + ".las")
-                else: 
-                    file_name_temp = file_name + "_laser_id_" + str(i) + ".las"
-
-                if np.any(data['point']['user_data'] == i):
-                    write_points_to_las(file_name_temp, header, data[data['point']['user_data'] == i])
-                    print(file_name_temp)
-
-    else:  #Then it is a color array input
-        for classifier in classifier_array:        
-            if file_name.endswith(".las"):
-                file_name_temp = file_name.replace(".las", "_" + classifier + ".las")
-            else: 
-                file_name_temp = file_name + "_" + classifier + ".las"
-            print(file_name_temp)
-            write_points_to_las(file_name_temp, header, data[data['point'][classifier] > 0])
 
 def write_data_into_files(file_name, header, data, offset):
     if file_name.endswith(".las"):
@@ -135,16 +94,6 @@ def write_data_into_files(file_name, header, data, offset):
     write_points_to_las_with_offset(file_name_temp, header, data, offset)
     print(file_name_temp)
 
-def write_data_into_files_based_on_user_data(file_name, header, data):
-    for i in range(lidar_info['num_lasers']):      
-        if file_name.endswith(".las"):
-            file_name_temp = file_name.replace(".las", "_laser_id_" + str(i) + ".las")
-        else: 
-            file_name_temp = file_name + "_laser_id_" + str(i) + ".las"
-
-        if np.any(data['point']['user_data'] == i):
-            write_points_to_las(file_name_temp, header, data[data['point']['user_data'] == i])
-            print(file_name_temp)
 
 def write_data_into_files_based_on_user_data_with_offset(file_name, header, data, offset):
     for i in range(lidar_info['num_lasers']):      
@@ -156,55 +105,6 @@ def write_data_into_files_based_on_user_data_with_offset(file_name, header, data
         if np.any(data['point']['user_data'] == i):
             write_points_to_las_with_offset(file_name_temp, header, data[data['point']['user_data'] == i], offset)
             print(file_name_temp)
-
-def load_las_files_in_directory(directory_path, num_files, delete):
-    """Loads all las files in directory into one numpy array, returns False if no files"""
-    if num_files > len(os.listdir(directory_path)):
-        num_files = len(os.listdir(directory_path))
-
-    num_lasers_in_use = lidar_info['num_lasers_in_use']
-    fire_seq_per_packet = 12
-    num_packets = 53 #Usually 52, need som margin apparently 
-    data_len_file = num_lasers_in_use*fire_seq_per_packet*num_packets
-    data_len_total = num_files * data_len_file
-    
-    data_table_exists = False
-    
-    idx_to_write = 0
-    idx_file_num = 0
-    
-    for file in os.listdir(directory_path):
-        if file.endswith(".las"):
-            file_name = os.path.join(directory_path, file)
-            infile = laspy.file.File(file_name, mode="r")
-            
-    
-            if (not data_table_exists):
-                data_temp = np.array(infile.points)
-                data = np.zeros(data_len_total,dtype=data_temp.dtype)
-                #print("data size", data.size)
-                data_table_exists = True
-                    
-
-            data[idx_to_write : idx_to_write + infile.points.size] = infile.points
-
-            idx_to_write += infile.points.size
-        
-            infile.close()
-            
-            if delete:
-                os.remove(file_name)
-
-            idx_file_num += 1
-            if num_files == idx_file_num:
-                break
-
-    if not data_table_exists:
-        print("No data in directory path", directory_path)
-        return False
-    else: 
-        print("Expected measurements: "+ str(data_len_total) + " Received measurements: " + str(idx_to_write) + " Data loss: " + str(data_len_total - idx_to_write))
-        return data[0:idx_to_write]
 
 
 def load_las_files_in_directory_with_offset(directory_path, num_files, delete):
@@ -302,84 +202,3 @@ def delete_las_files_in_directory(directory_path, num_files):
                 break
 
     return still_contain_files #If 
-
-
-def load_all_las_files_in_directory(directory_path):
-    """Loads all las files in directory into one numpy array, returns -1 if no files"""
-    num_files = len(os.listdir(directory_path))
-    num_lasers_in_use = lidar_info['num_lasers_in_use']
-    fire_seq_per_packet = 12
-    num_packets = 53 #Usually 52, need som margin apparently 
-    data_len_file = num_lasers_in_use*fire_seq_per_packet*num_packets
-    data_len_total = num_files * data_len_file
-    
-    data_table_exists = False
-    
-    idx_to_write = 0
-    
-    for file in os.listdir(directory_path):
-        if file.endswith(".las"):
-            file_name = os.path.join(directory_path, file)
-            infile = laspy.file.File(file_name, mode="r")
-            
-            if (not data_table_exists):
-                data_temp = infile.points
-                data = np.zeros(data_len_total,dtype=data_temp.dtype)
-                #print("data size", data.size)
-                data_table_exists = True
-            
- 
-            data[idx_to_write : idx_to_write + infile.points.size] = infile.points
-            idx_to_write += infile.points.size
-        
-            infile.close()
-
-    if not data_table_exists:
-        print("No data in directory path", directory_path)
-        return -1
-    else: 
-        print("Expected measurements: "+ str(data_len_total) + " Received measurements: " + str(idx_to_write) + " Data loss: " + str(data_len_total - idx_to_write))
-        return data[0:idx_to_write]
-
-
-def delete_all_las_files_in_directory(directory_path):
-    for file in os.listdir(directory_path):
-        if file.endswith(".las"):
-            file_name = os.path.join(directory_path, file)
-            os.remove(file_name)
-
-def load_one_frame_from_las(file_name):
-    infile = laspy.file.File(file_name, mode="r")
-    frame = []
-    for i in range(len(infile.X)): 
-        data_channel = {
-            'x': infile.X[i],
-            'y': infile.Y[i],
-            'z': infile.Z[i],
-            'reflectivity': infile.intensity[i],
-            'return_num': infile.return_num[i],
-            'num_returns': infile.num_returns[i],
-            'timestamp': infile.gps_time[i]
-            #'azimuth' : infile.scan_angle
-        }
-        frame.append(data_channel)
-    
-    return frame
-
-
-
-
-if __name__ == "__main__":
-    directory_path = "./frame_files/" 
-    directory_name = "frame_files_2019_8_8_19_yaw_three_lasers_60_degrees"
-    directory = directory_path + directory_name
-    
-    
-    classifier_array = ['red', 'green', 'blue']
-    
-    data = load_all_las_files_in_directory(directory)
-    
-    
-    outfile_directory = "./collected_las_files/"
-    outfile_file_name = directory_name
-    write_data_into_files_based_on_classifier(outfile_directory + outfile_file_name, None, data, classifier_array)
