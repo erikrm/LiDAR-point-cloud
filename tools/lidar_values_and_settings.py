@@ -2,7 +2,7 @@
 important to set serial_settings, udp_info and lidar_settings"""
 import numpy as np
 from openpyxl import load_workbook
-from .div_functions import get_input_file_from_dialog
+from tools.div_functions import get_input_file_from_dialog
 
 #Constants:
 lidar_constants = {
@@ -45,7 +45,7 @@ if excel_setting_file_name != -1:
         'yaw': sheet_lidar_settings['B22'].value
     }
 
-    gps_leap_seconds = sheet_lidar_settings['B25'].values
+    gps_leap_seconds = sheet_lidar_settings['B25'].value
 
 else: #Default settings if the provided sheet is wrong
     lidar_settings = {
