@@ -4,7 +4,7 @@
 
 #### Get started
 * Install python 3.7.4 64 bit (you will need all your RAM), be sure to choose "add to path" when using Windows.
-* Clone the erikrm/LiDAR git repository (It is private, so you'll need permission).
+* Clone the erikrm/LiDAR git repository or copy the folder LiDAR.
 * Install the needed python packages by running the following command inside the cloned folder: 
   ```python 
     pip install -r ./python_requirements.txt
@@ -26,7 +26,7 @@ The program doesn't read in the INS .log file corresponding to the .txt with the
 To process pcap data follow these steps:
 * Create a folder in a desired location with a name describing the data to be processed
 * Copy the .xlsx settings file lidar_settings.xlsx to that folder
-* Edit the copied version to describe your flight
+* Edit the copied version to describe your flight, the Settings sheet is the only sheet being processed by the programs. 
 * Call read_pcap_from_file: 
   ```python
     python read_pcap_from_file.py
@@ -36,6 +36,7 @@ To process pcap data follow these steps:
   * The input pcap file (Containing the LiDAR measurements)
   * The corresponding INS file (They have to be in the same time span for there to be any output)
   * The out file directory
+* fg
 
 #### Pitfalls
 * Leap seconds, see read_pcap_from_file.

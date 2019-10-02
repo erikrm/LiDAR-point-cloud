@@ -24,6 +24,9 @@ from tools.lidar_values_and_settings import udp_info
 from tools.lidar_values_and_settings import dt_measurement
 from tools.lidar_values_and_settings import dt_position
 from tools.lidar_values_and_settings import angle_offset_per_laser as offset
+from tools.lidar_values_and_settings import sheet_lidar_settings
+from tools.lidar_values_and_settings import excel_setting_file_name
+
 from tools import write_to_las
 
 def seconds_to_time_str(seconds):
@@ -207,16 +210,50 @@ def get_input_file_from_dialog(title, file_path, file_type):
     return file_name
 
 
-if __name__ == '__main__':     
-    temp_location_frame_files = "./files_from_pcap/"
-    packet_devisor = 1 #Will only process every n packets
-    num_frames = 200 #If set to negative value it will finish all
-    num_frames_per_las_file = 200 * packet_devisor # Possible to divide into different batches to limit data stored in memory
-    
+def get_the_four_paths():
     #Find input file locations and output folder:
-    file_path_pcap = get_input_file_from_dialog("Choose PCAP file", "./flight_scans", "pcap")
-    file_path_ins = get_input_file_from_dialog("Choose INS file", "./flight_ins", "txt")
-    out_file_directory = askdirectory(initialdir="./processed_las", title="Choose folder for the output las-files")
+    if os.path.isdir(sheet_lidar_settings['B49'].value):
+        temp_location_frame_files = sheet_lidar_settings['B49'].value
+    else: 
+        temp_location_frame_files = "./files_from_pcap/"
+
+    if os.path.isfile(sheet_lidar_settings['B47'].value) :
+        file_path_pcap = sheet_lidar_settings['B47'].value
+    else:   
+        file_path_pcap = get_input_file_from_dialog("Choose PCAP file", "./flight_scans", "pcap")
+    
+    if os.path.isfile(sheet_lidar_settings['B48'].value) :
+        file_path_ins = sheet_lidar_settings['B48'].value
+    else:   
+        file_path_ins = get_input_file_from_dialog("Choose INS file", "./flight_ins", "txt")
+    
+    if os.path.isdir(sheet_lidar_settings['B56'].value) :
+        out_file_directory = sheet_lidar_settings['B56'].value
+    else:   
+        out_file_directory = askdirectory(initialdir="./processed_las", title="Choose folder for the output las-files")
+
+    return temp_location_frame_files, file_path_pcap, file_path_ins, out_file_directory
+
+
+if __name__ == '__main__':     
+    if sheet_lidar_settings != -1:
+        
+        packet_devisor = sheet_lidar_settings['B51'].value #Will only process every n packets
+        num_frames = sheet_lidar_settings['B52'].value #If set to negative value it will finish all
+        num_frames_per_las_file = sheet_lidar_settings['B55'].value # Possible to divide into different batches to limit data stored in memory
+        
+        temp_location_frame_files, file_path_pcap, file_path_ins, out_file_directory = get_the_four_paths()
+
+    else: #Default values:
+        temp_location_frame_files = "./files_from_pcap/"
+        packet_devisor = 1 #Will only process every n packets
+        num_frames = 200 #If set to negative value it will finish all
+        num_frames_per_las_file = 200 * packet_devisor # Possible to divide into different batches to limit data stored in memory
+        
+        #Find input file locations and output folder:
+        file_path_pcap = get_input_file_from_dialog("Choose PCAP file", "./flight_scans", "pcap")
+        file_path_ins = get_input_file_from_dialog("Choose INS file", "./flight_ins", "txt")
+        out_file_directory = askdirectory(initialdir="./processed_las", title="Choose folder for the output las-files")
 
     #Using a log file to save info about the processing
     logging.basicConfig(filename=out_file_directory + '/log.txt',
@@ -227,7 +264,8 @@ if __name__ == '__main__':
 
     time_start = time_ns()
     
-    logging.info("Processing started")
+    logging.info("Processing started, " + str(datetime.datetime.now()))
+    logging.info("Settings file: " + str(excel_setting_file_name))
     logging.info("Parameters: packet_devisor=" + str(packet_devisor) + " num_frames=" + str(num_frames) + " num_frames_per_las_file=" + str(num_frames_per_las_file))
     logging.info("File paths: pcap=" + str(file_path_pcap) + " ins=" + str(file_path_ins) + " out_file_directory=" + str(out_file_directory))
 

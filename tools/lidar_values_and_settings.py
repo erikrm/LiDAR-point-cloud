@@ -58,6 +58,8 @@ if excel_setting_file_name != -1:
     }
 
 else: #Default settings if the provided sheet is wrong
+    sheet_lidar_settings = -1
+
     lidar_settings = {
         'fov_size': 30,
         'rpm': 300, #Must be divisible by 60 and in the range [300, 1200], The LiDAR won't accept anything else. 
