@@ -18,7 +18,7 @@ from ximc.examples.testpython import testpython as stage_control
 
 from tools import serial_communication
 
-import tools.networking as networking
+from tools.div_functions import socket_setup 
 
 
 def retrieve_packet_batch(timeout_between_packets, timeout_total):
@@ -28,8 +28,8 @@ def retrieve_packet_batch(timeout_between_packets, timeout_total):
     data_measurements = []
     data_position = []
 
-    sock_measurement_packet = networking.socket_setup(udp_info['ip'],udp_info['port_measurement_packet'])
-    sock_position_packet = networking.socket_setup(udp_info['ip'],udp_info['port_position_packet'])
+    sock_measurement_packet = socket_setup(udp_info['ip'],udp_info['port_measurement_packet'])
+    sock_position_packet = socket_setup(udp_info['ip'],udp_info['port_position_packet'])
 
     time_of_last_measurement_packet = 0
     received_any_measurement_packets = False

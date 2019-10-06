@@ -1,4 +1,5 @@
 import os
+import socket
 import sys
 
 #For file input
@@ -15,3 +16,13 @@ def get_input_file_from_dialog(title, init_file_path, file_type):
         return -1
     
     return file_name
+
+
+def socket_setup(udp_ip, udp_port):
+    sock = socket.socket(socket.AF_INET, #Internet
+                            socket.SOCK_DGRAM, socket.IPPROTO_UDP) #UDP
+    sock.bind(('', udp_port))
+    sock.connect((udp_ip,udp_port))
+
+    #sock.setsockopt(socket.IPPROTO_IP, socket.IP_HDRINCL, 1)
+    return sock
