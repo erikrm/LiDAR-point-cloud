@@ -165,13 +165,9 @@ def rotation_matrix_array(rpy):
 
     return R
 
-def interpolate_ins_2(measurement_data, ins_data, current_gps_time_toh):
+def interpolate_ins(measurement_data, ins_data, current_gps_time_toh):
 
     gps_times = measurement_data['timestamp'] + current_gps_time_toh*pow(10,9) + gps_leap_seconds*pow(10,9)
-    #print("current gps_time_toh:", current_gps_time_toh)
-    #print(measurement_data['timestamp'][np.nonzero(measurement_data)])
-    #print(measurement_data['timestamp'][-100:])
-    #print("gps_times", gps_times, "ins_gps_time", ins_data['gps_time'])
     
     if gps_times[0] < ins_data['gps_time'][0]*pow(10,9) or gps_times[-1] > ins_data['gps_time'][-1]*pow(10,9):
         print("Gps time out of bounds: " + str(gps_times[0]) + " < " + str(ins_data['gps_time'][-1]) + " or " + str(gps_times[-1]) + " > " + str(ins_data['gps_time'][-1]))
@@ -183,46 +179,6 @@ def interpolate_ins_2(measurement_data, ins_data, current_gps_time_toh):
     measurement_data['ins_rpy'][:,1] = np.interp(gps_times, ins_data['gps_time']*pow(10,9), 360 - ins_data['pitch'])
     measurement_data['ins_rpy'][:,2] = np.interp(gps_times, ins_data['gps_time']*pow(10,9), 360 - ins_data['yaw'])
 
-    #idx = np.searchsorted(ins_data['gps_time'],gps_times[0])
-    #print("interpolation: ", gps_times[0], "ins_data" , ins_data[idx], "ins_rpy", measurement_data['ins_rpy'][0], "ins_xyz", measurement_data['ins_xyz'][0])
-
-def interpolate_ins(measurement_data, txyzrpy_delta_txyzrpy): 
-    """
-    Interpolates INS data to each measurement based on timestamp and linear interpolation. 
-    It is assumed that all measurements within a FOV should interpolate from the same two ins_data, 
-    this should always be the case as FOV is about 15 ms, while ins_data comes at 5 Hz, i.e. every 200ms
-    Returns True if delta t is above zero, False if not. 
-    """
-
-    timestamp_gps = txyzrpy_delta_txyzrpy[0] * pow(10,9) #The gps gives it in seconds
-    x = txyzrpy_delta_txyzrpy[1]
-    y = txyzrpy_delta_txyzrpy[2]
-    z = txyzrpy_delta_txyzrpy[3]
-    roll = txyzrpy_delta_txyzrpy[4]
-    pitch = txyzrpy_delta_txyzrpy[5]
-    yaw = txyzrpy_delta_txyzrpy[6]
-    delta_t = txyzrpy_delta_txyzrpy[7] *pow(10,9)
-    delta_x = txyzrpy_delta_txyzrpy[8]
-    delta_y = txyzrpy_delta_txyzrpy[9]
-    delta_z = txyzrpy_delta_txyzrpy[10]
-    delta_roll = txyzrpy_delta_txyzrpy[11]
-    delta_pitch = txyzrpy_delta_txyzrpy[12]
-    delta_yaw = txyzrpy_delta_txyzrpy[13]
-    
-
-    if delta_t > 0:
-        measurement_data['ins_xyz'][:,0] = delta_x/delta_t * (measurement_data['timestamp'] - timestamp_gps) + x
-        measurement_data['ins_xyz'][:,1] = delta_y/delta_t * (measurement_data['timestamp'] - timestamp_gps) + y
-        measurement_data['ins_xyz'][:,2] = delta_z/delta_t * (measurement_data['timestamp'] - timestamp_gps) + z
-        measurement_data['ins_rpy'][:,0] = delta_roll/delta_t * (measurement_data['timestamp'] - timestamp_gps) + roll
-        measurement_data['ins_rpy'][:,1] = delta_pitch/delta_t * (measurement_data['timestamp'] - timestamp_gps) + pitch
-        measurement_data['ins_rpy'][:,2] = delta_yaw/delta_t * (measurement_data['timestamp'] - timestamp_gps) + yaw
-        return True
-    else: 
-        print("Couldn't interpolate, delta t should be >0 not", delta_t)
-        return False
-    
-   
 
 def calculate_xyz_lu(measurement_data): #lu : lidar unit
     return np.transpose(np.array([

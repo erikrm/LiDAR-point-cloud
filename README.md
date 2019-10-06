@@ -36,7 +36,10 @@ To process pcap data follow these steps:
   * The input pcap file (Containing the LiDAR measurements)
   * The corresponding INS file (They have to be in the same time span for there to be any output)
   * The out file directory
-* fg
+
+#### Excel file
+![](/readme_pictures/lidar_rotation.jpg)
+
 
 #### Pitfalls
 * Leap seconds, see read_pcap_from_file.
@@ -46,13 +49,21 @@ To process pcap data follow these steps:
 * When the program collects las frames into a more complete las file it is limited by the RAM on the computer. This is due to the open source program Laspy not having implemented append functionality to its file manipulation programs. My current solution is to divide the las files into batches. This is now not an automated solution, and the user have to define the number of frames per las file beforehand. 
 
 
-## udp_listen.py
-#### How too
-#### Pitfalls
-
 ## Tools 
-This folder contains all the functions that are not meant to be called directly, but rather used by the programs in the parent folder. The tools are divided into five programs.
+This folder contains all the functions that are not meant to be called directly, but rather used by the programs in the parent folder. The tools are divided into five scripts.
 
 ### lidar_values_and_settings.py
-This program contains all variables and setting used. 
+This program contains all variables and setting used. If an Excel file is given with a sheet called "Settings", lidar_values_and_settings will use these values instead of its own default values. It will only parse values that are subject to change. I have not given the ability to parse constants so if a different LiDAR is being used, the constants must be changed inside this file. That is not a hard task, but I think it can be confusing for a normal user. This is the reason I parse from Excel, so that the user doesn't have to change any code during normal use. 
+
+### div_functions.py
+This file contains a diverse set of random functions. 
+
+### write_to_las,py
+This script contains all the code for reading and writing to las files. 
+
+### udp_unpack
+This file contains all the functions used in processing the LiDAR data, from calculating all the 
+
+### serial_communication.py 
+This file contains the functions used for programming and communicating with the Garmin gps.
 
