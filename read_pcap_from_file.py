@@ -62,10 +62,10 @@ def process_pcap(out_file_location, file_name, ins_data, num_frames, packet_devi
     
     index = -1
     
-    print("First ins_time",seconds_to_time_str(ins_data['gps_time'][0]), "last ins_time", seconds_to_time_str(ins_data['gps_time'][-1]))
+    logging.info("First ins_time: " + seconds_to_time_str(ins_data['gps_time'][0]) + " last ins_time: " + seconds_to_time_str(ins_data['gps_time'][-1]))
     printed_first_lidar_time = False
     
-    print('Opening {}...'.format(file_name))
+    logging.info("Opening " + file_name)
     for (pkt_data, pkt_metadata,) in RawPcapReader(file_name): #There should be fdesc and magic values to define the pcap file, but I have not found out what they should be. It seems to be stable without them
         index += 1
 
@@ -73,7 +73,7 @@ def process_pcap(out_file_location, file_name, ins_data, num_frames, packet_devi
         
         if pkt_metadata.wirelen == 1206 + udp_info['header_size'] and index % packet_devisor == 0:
             if not printed_first_lidar_time:
-                print("First lidar time", seconds_to_time_str(current_gps_time))
+                logging.info("First lidar time: " + seconds_to_time_str(current_gps_time))
                 first_lidar_time = current_gps_time
                 printed_first_lidar_time = True
 
@@ -96,7 +96,6 @@ def process_pcap(out_file_location, file_name, ins_data, num_frames, packet_devi
                     azimuth_gap_block += 360
 
                 if azimuth_gap_block > 360 - lidar_info['fov_size']*2: #This solution saves the first batch of each frame at the old frame right? That is not perfect
-                    #print(current_gps_time_toh)
                     if frame_nr < 10: #Easier sorting, works up to 9999
                         str_frame_nr = '000' + str(frame_nr)
                     elif frame_nr < 100:
@@ -110,21 +109,8 @@ def process_pcap(out_file_location, file_name, ins_data, num_frames, packet_devi
                     data.fill(0)
                     #data_trimmed = data_trimmed[data_trimmed['laser_id'] == 5]
 
-                    udp_unpack.interpolate_ins_2(data_trimmed, ins_data, current_gps_time_toh) #Will this give 1 sec wrong every hour change on one batch?
-
+                    udp_unpack.interpolate_ins_2(data_trimmed, ins_data, current_gps_time_toh) #Will this give 1 sec wrong every hour change on one batch
                     udp_unpack.transform_to_map(data_trimmed)
-                    
-                    #if data_trimmed['xyz'][0,2] < 2000:
-                    #    print(data_trimmed)
-
-                    #mask = np.isin(data['laser_id'], [0, 5, 10])
-                    
-                    """
-                    with open('test.csv','a') as fd:
-                        array = np.append(data_trimmed['xyz'], data_trimmed['xyz_lu'], axis=1)
-                        array2 = np.append(data_trimmed['timestamp'], np.transpose(array), axis=1)
-                        np.savetxt(fd,array2,delimiter=',')
-                    """
                     
                     write_to_las.write_one_frame_to_las(file_name,None,data_trimmed)
                     
@@ -223,7 +209,7 @@ if __name__ == '__main__':
     ins_data = process_ins_to_utm(file_path_ins)
 
     process_pcap(temp_location_frame_files, file_path_pcap, ins_data, num_frames, packet_devisor)
-    print("Execution time from pcap:",(time_ns() - time_start)/pow(10,9))
+    logging.info("Execution time from pcap: " + str((time_ns() - time_start)/pow(10,9)))
     
     batch_num = 0
     
@@ -232,7 +218,7 @@ if __name__ == '__main__':
         time_top = time_ns()
         data, offset, loaded_frame_files = write_to_las.load_las_files_in_directory_with_offset(temp_location_frame_files, num_frames_per_las_file)
         if isinstance(data, int):
-            print("Finished all the files")
+            logging.info("Finished all the files")
             break
 
         if num_frames_per_las_file >= num_frames:
@@ -243,10 +229,14 @@ if __name__ == '__main__':
 
         for frame_file_name in loaded_frame_files:
             os.remove(frame_file_name)
-            print("removed", frame_file_name)
+        
+        logging.info("Batch: " + str(batch_num) + " of frame files deleted")
 
         # still_contain_las_files = write_to_las.delete_las_files_in_directory(temp_location_frame_files,num_frames_per_las_file)
+        
+        logging.info("Total execution time collecting: " + str((time_ns() - time_start)/pow(10,9)) + ' Execution time this batch: ' + str((time_ns() - time_top)/pow(10,9)) + ' Batch num: ' + str(batch_num))
         batch_num += 1
-        print("Total execution time collecting:",(time_ns() - time_start)/pow(10,9),'Execution time this batch:',(time_ns() - time_top)/pow(10,9),'Batch num:', batch_num)
+        
+
 
     sys.exit(0) 
