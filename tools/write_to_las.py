@@ -31,7 +31,7 @@ def write_one_frame_to_las(file_name, header, data_meas):
     z_max = np.amax(data_meas['xyz'][:,2])
 
     if y_min < 0 or x_min < 0:
-        print("NEGATIVE!!? xy_min", x_min, y_min, "xy_max", x_max, y_max)
+        print("UTM shouldn't allow negative x and y. xy_min", x_min, y_min, "xy_max", x_max, y_max)
 
     if x_max > las_file_settings['max_x']:
         x_offset = int(x_min*scale[0]) #In meters

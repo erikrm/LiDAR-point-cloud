@@ -109,9 +109,9 @@ def process_pcap(out_file_location, file_name, ins_data, num_frames, packet_devi
                     data.fill(0)
                     #data_trimmed = data_trimmed[data_trimmed['laser_id'] == 5]
 
-                    udp_unpack.interpolate_ins_2(data_trimmed, ins_data, current_gps_time_toh) #Will this give 1 sec wrong every hour change on one batch
+                    udp_unpack.interpolate_ins(data_trimmed, ins_data, current_gps_time_toh) #Will this give 1 sec wrong every hour change on one batch
                     udp_unpack.transform_to_map(data_trimmed)
-                    
+
                     write_to_las.write_one_frame_to_las(file_name,None,data_trimmed)
                     
                     data_packet_nr = 0
@@ -163,9 +163,10 @@ def get_the_four_paths():
         file_path_ins = sheet_lidar_settings['B48'].value
     else:   
         file_path_ins = get_input_file_from_dialog("Choose INS file", "./flight_ins", "txt", True)
-
-    if os.path.isdir(sheet_lidar_settings['B56'].value) :
-        out_file_directory = sheet_lidar_settings['B56'].value
+    
+    out_file_directory = sheet_lidar_settings['B56'].value
+    if isinstance(out_file_directory, str) and os.path.isdir(out_file_directory):
+            out_file_directory = sheet_lidar_settings['B56'].value
     else:   
         out_file_directory = askdirectory(initialdir="./processed_las", title="Choose folder for the output las-files")
 
@@ -181,12 +182,20 @@ if __name__ == '__main__':
         
         temp_location_frame_files, file_path_pcap, file_path_ins, out_file_directory = get_the_four_paths()
 
+        run_from_pcap = sheet_lidar_settings['B46'] .value
+        run_from_frame_files = sheet_lidar_settings['B54'].value
+        separate_files_on_laser_id = sheet_lidar_settings['B58'].value
+
     else: #Default values:
         temp_location_frame_files = "./files_from_pcap/"
         packet_devisor = 1 #Will only process every n packets
         num_frames = 200 #If set to negative value it will finish all
         num_frames_per_las_file = 200 * packet_devisor # Possible to divide into different batches to limit data stored in memory
-        
+
+        run_from_pcap = 1 
+        run_from_frame_files = 1
+        separate_files_on_laser_id = 0
+
         #Find input file locations and output folder:
         file_path_pcap = get_input_file_from_dialog("Choose PCAP file", "./flight_scans", "pcap", True)
         file_path_ins = get_input_file_from_dialog("Choose INS file", "./flight_ins", "txt", True)
@@ -206,37 +215,43 @@ if __name__ == '__main__':
     logging.info("Parameters: packet_devisor=" + str(packet_devisor) + " num_frames=" + str(num_frames) + " num_frames_per_las_file=" + str(num_frames_per_las_file))
     logging.info("File paths: pcap=" + str(file_path_pcap) + " ins=" + str(file_path_ins) + " out_file_directory=" + str(out_file_directory))
 
-    ins_data = process_ins_to_utm(file_path_ins)
-
-    process_pcap(temp_location_frame_files, file_path_pcap, ins_data, num_frames, packet_devisor)
-    logging.info("Execution time from pcap: " + str((time_ns() - time_start)/pow(10,9)))
+    if run_from_pcap:
+        ins_data = process_ins_to_utm(file_path_ins)
+        process_pcap(temp_location_frame_files, file_path_pcap, ins_data, num_frames, packet_devisor)
+        logging.info("Execution time from pcap: " + str((time_ns() - time_start)/pow(10,9)))
     
-    batch_num = 0
-    
-    time_start = time_ns()
-    while batch_num*num_frames_per_las_file <= num_frames or num_frames < 0: 
-        time_top = time_ns()
-        data, offset, loaded_frame_files = write_to_las.load_las_files_in_directory_with_offset(temp_location_frame_files, num_frames_per_las_file)
-        if isinstance(data, int):
-            logging.info("Finished all the files")
-            break
-
-        if num_frames_per_las_file >= num_frames:
-            out_file_name = ''
-        else: out_file_name = 'batch_' + str(batch_num) + '_'
-
-        write_to_las.write_data_into_files_based_on_user_data_with_offset(out_file_directory + "/" + out_file_name, None, data, offset)    
-
-        for frame_file_name in loaded_frame_files:
-            os.remove(frame_file_name)
+    if run_from_frame_files:
+        batch_num = 0
         
-        logging.info("Batch: " + str(batch_num) + " of frame files deleted")
+        time_start = time_ns()
+        while batch_num*num_frames_per_las_file <= num_frames or num_frames < 0: 
+            time_top = time_ns()
+            data, offset, loaded_frame_files = write_to_las.load_las_files_in_directory_with_offset(temp_location_frame_files, num_frames_per_las_file)
+            if isinstance(data, int):
+                logging.info("Finished all the files")
+                break
 
-        # still_contain_las_files = write_to_las.delete_las_files_in_directory(temp_location_frame_files,num_frames_per_las_file)
-        
-        logging.info("Total execution time collecting: " + str((time_ns() - time_start)/pow(10,9)) + ' Execution time this batch: ' + str((time_ns() - time_top)/pow(10,9)) + ' Batch num: ' + str(batch_num))
-        batch_num += 1
-        
+            if num_frames_per_las_file >= num_frames:
+                out_file_name = 'all_lasers'
+            else: out_file_name = 'batch_' + str(batch_num) + '_'
+
+            outfile_path = out_file_directory + "/" + out_file_name
+
+            if separate_files_on_laser_id:
+                write_to_las.write_data_into_files_based_on_user_data_with_offset(outfile_path, None, data, offset)    
+            else: 
+                write_to_las.write_data_into_files(outfile_path, None, data, offset)
+
+            for frame_file_name in loaded_frame_files:
+                os.remove(frame_file_name)
+            
+            logging.info("Batch: " + str(batch_num) + " of frame files deleted")
+
+            # still_contain_las_files = write_to_las.delete_las_files_in_directory(temp_location_frame_files,num_frames_per_las_file)
+            
+            logging.info("Total execution time collecting: " + str((time_ns() - time_start)/pow(10,9)) + ' Execution time this batch: ' + str((time_ns() - time_top)/pow(10,9)) + ' Batch num: ' + str(batch_num))
+            batch_num += 1
+            
 
 
     sys.exit(0) 

@@ -207,7 +207,7 @@ def transform_to_map(measurement_data):
     measurement_data['xyz_lu'] = xyz_lu
     xyz_lu = xyz_lu[:,:, np.newaxis]
 
-    #R_la = rotation_matrix(lidar_lever_arm['roll'], lidar_lever_arm['pitch'], lidar_lever_arm['yaw'])
+    R_la = rotation_matrix(lidar_lever_arm['roll'], lidar_lever_arm['pitch'], lidar_lever_arm['yaw'])
 
     r_la = np.array([lidar_lever_arm['x'], lidar_lever_arm['y'], lidar_lever_arm['z']])
     r_la = r_la[np.newaxis,:,np.newaxis]
@@ -215,45 +215,16 @@ def transform_to_map(measurement_data):
     R_gps = rotation_matrix_array(measurement_data['ins_rpy'])
 
     r_gps = measurement_data['ins_xyz']
-    #i=0
+
+    measurement_data['xyz'] =  r_gps + np.squeeze(np.matmul(np.matmul(R_gps,R_la), xyz_lu + r_la))
+
     """
-    print("xyz", measurement_data['xyz'].shape)
-    print("r_gps", r_gps.shape)
-    print("R_gps", R_gps.shape)
-    print("r_la", r_la.shape)
-    print("R_la", R_la.shape)
-    print("xyz_lu", xyz_lu.shape)
-    """    
-    #mask = np.nonzero(xyz_lu[:,1])
-    #print("xyz_lu", xyz_lu[mask])
-    
+    #This is a "manual" way of rotating the main degrees, probably faster. 
     temp = np.array(xyz_lu + r_la)
-    #print(temp)
-    #print(temp.shape)
     changed_coordinate = np.array(temp[:,[0,2,1],:])
     changed_coordinate[:,:,:] *= -1
-
-    #print("changed coordinate", changed_coordinate)
-    #print(changed_coordinate.shape)
-    #import sys
-    #sys.exit(0)
-    #measurement_data['xyz'] =  r_gps + np.squeeze(np.matmul(np.matmul(R_gps,R_la), xyz_lu + r_la))
-    measurement_data['xyz'] =  r_gps + np.squeeze(np.matmul(R_gps, changed_coordinate))
-    #mask = np.nonzero(measurement_data['xyz'][:,1])
-    #print(measurement_data)
+    measurement_data['xyz'] = r_gps + np.squeeze(np.matmul(R_gps, changed_coordinate))
+    """
     
-    """
-
-    for i in range(measurement_data.size): #Can this be done in matrix form without for loop? Probably
-        measurement_data['xyz'][i] = r_gps[i] + np.dot(R_gps[i],r_la) + np.dot(np.dot(R_gps[i], R_la), xyz_lu[i])
-
-        
-        if(np.sum(measurement_data['xyz'][i] - xyz_lu[i]) > r_gps[i][2] + 0.0001):
-            print("Proooooooooooooooooooooooooooblem ? ooooooooooooooo")
-            print(measurement_data['xyz'][i], "xyz")
-            print(xyz_lu[i], "xyz_lu")
-            print(r_gps[i][2])
-    """
-    #xyz_map = r_gps + np.dot
-
-    #r_gps 
+    
+    

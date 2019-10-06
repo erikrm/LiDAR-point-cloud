@@ -26,7 +26,7 @@ The program doesn't read in the INS .log file corresponding to the .txt with the
 To process pcap data follow these steps:
 * Create a folder in a desired location with a name describing the data to be processed
 * Copy the .xlsx settings file lidar_settings.xlsx to that folder
-* Edit the copied version to describe your flight, the Settings sheet is the only sheet being processed by the programs. 
+* Edit the copied version to describe your flight, the Settings sheet is the only sheet being processed by the programs, so you can use the rest to your discretion. 
 * Call read_pcap_from_file: 
   ```python
     python read_pcap_from_file.py
@@ -38,9 +38,9 @@ To process pcap data follow these steps:
   * The out file directory
 
 #### Excel file
-![](/readme_pictures/lidar_rotation.jpg)
-
-
+The Excel file chosen when the program starts is where you configure every setting used during processing. Note that constants specific to VLP-32C is kept in the file lidar_values_and_settings.py and not in the excel sheet Settings. 
+<img src="/readme_pictures/lidar_rotation.jpg" alt="lidar_rotation" width="300"/>
+ 
 #### Pitfalls
 * Leap seconds, see read_pcap_from_file.
 * Midnight, the timestamps given in the INS files are seconds since midnight between Saturday and Sunday. The timestamps given in the LiDAR measurements are seconds since the last hour change, top of hour (TOH). I choose to fix this discrepancy by using modulo on the gps timestamp to narrow it down to seconds since midnight on the current day. Then I used the NMEA string saved in the position packets sent by the LiDAR to find the hour of the day, I used this to convert from seconds since TOH to seconds since midnight (It is important to add the leap seconds here!). This might cause a problem if the drone for some reason is flown at midnight, maybe in the north in the summer. It might work too, I cannot test it.
@@ -62,7 +62,7 @@ This file contains a diverse set of random functions.
 This script contains all the code for reading and writing to las files. 
 
 ### udp_unpack
-This file contains all the functions used in processing the LiDAR data, from calculating all the 
+This file contains all the functions used in processing the LiDAR data. I would take a special look at rotation_matrix_array, interpolate_ins and transform_to_map as sources for error if the scans look weird. Especially note that interpolate_ins inverses the rotation from the ins. I had to do this to make it seem nice, but I'm not really confident about it. 
 
 ### serial_communication.py 
 This file contains the functions used for programming and communicating with the Garmin gps.
