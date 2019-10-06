@@ -14,7 +14,7 @@ lidar_constants = {
     'num_fire_sequence_bytes': 100
 }
 
-excel_setting_file_name = get_input_file_from_dialog("Excel LiDAR settings", "./", "xlsx")
+excel_setting_file_name = get_input_file_from_dialog("Excel LiDAR settings", "./", "xlsx", exit_if_not_exist = False)
 
 # Sets settings equal to the users preferences if the user chooses a suitable file, otherwise the default setting are applied
 if excel_setting_file_name != -1:
